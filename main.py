@@ -1,23 +1,37 @@
 import tensorflow as tf
 import numpy as np
 import os, argparse, pdb
-import nn, construct_binary
+import nn, construct_binary, reader
+from utils import *
 
 class Model(object):
 
-    def __init__(self, args):
-	self.num_outputs = args.classes
+    def __init__(self, args, scope='mnist'):
+	self.num_classes = args.classes
+	self.scope = scope
 
     def _get_logits(self, x):
+	x = tf.to_float(x)/255.
 	fc1 = nn.fc(x, 100, nl=tf.nn.relu, scope='fc1')
-	prob = nn.fc(fc1, self.num_outputs, scope='fc2')
-	return tf.log(prob+1e-8)
+	prob = nn.fc(fc1, self.num_classes, scope='fc2')
+	return prob
 
     def _build_graph(self, x, y):
-	logits = self._get_logits(x)
-	y_onehot = tf.one_hot(y, self.num_outputs, 1.0, 0.0)
-	self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, y_onehot))
-	tf.summary.scalar("cost_cls", self.cost)
+	with tf.variable_scope(self.scope):
+	    logits = self._get_logits(x)
+	    y_onehot = tf.one_hot(y, self.num_classes, 1.0, 0.0)
+	    self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, y_onehot))
+	    prediction = tf.argmax(logits, 1)
+	    self.accuracy = tf.reduce_mean(tf.to_float(tf.equal(prediction, y)))
+	    tf.summary.scalar("cost", self.cost)
+	    tf.summary.scalar("accuracy", self.accuracy)
+
+    def _get_all_params(self):
+	params = []
+	for param in tf.global_variables():
+	    if self.scope in param.name:
+		params.append(param)
+	return params
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Multi-thread mnist classifier')
@@ -29,29 +43,40 @@ if __name__ == '__main__':
     parser.add_argument('--classes', type=int, default=10)
     args = parser.parse_args()
 
+    bin_filepath = 'mnist.tfrecords'
+    if not os.path.exists(bin_filepath):
+    	construct_binary.mnist(bin_filepath)
+    # convert the string into tensor (represent a single tensor)
+    single_label, single_image = reader.read_to_tensor(bin_filepath) 
+    images_batch, labels_batch = tf.train.shuffle_batch(
+    	[single_image, single_label], batch_size=args.batch_size,
+   	capacity=2000,
+    	min_after_dequeue=1000
+    )
+
+    # build graph
     M = Model(args)
-    bin_filepath = construct_binary.mnist()
-    pdb.set_trace()
+    M._build_graph(images_batch, labels_batch)
+    global_step = tf.get_variable('global_step', [], 
+			initializer=tf.constant_initializer(0), trainable=False)
+    train_op = tf.train.AdamOptimizer(args.lr).minimize(M.cost, global_step=global_step)
+    if not os.path.exists(bin_filepath):
+	os.makdir('./logs')
+    summary_writer = tf.summary.FileWriter('./logs')
+    summary_op = tf.summary.merge_all()
+    saver = tf.train.Saver(max_to_keep=20)
 
-
+    config = get_session_config(0.3)
+    sess = tf.Session(config=config)
     init_op = tf.global_variables_initializer()
-    sess = tf.Session()
     sess.run(init_op)
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-    try:
-    	while not coord.should_stop():
-            # Run training steps or whatever
-            sess.run(train_op)
-    except tf.errors.OutOfRangeError:
-    	print('Done training -- epoch limit reached')
-    finally:
-    	# When done, ask the threads to stop.
-    	coord.request_stop()
-
-    # Wait for threads to finish.
-    coord.join(threads)
-    sess.close()
-
-
-
+    # creates threads to start all queue runners collected in the graph
+    # [remember] always call init_op before start the runner
+    tf.train.start_queue_runners(sess=sess)
+    step = 0
+    while True:
+  	_, summary_str, loss = sess.run([train_op, summary_op, M.cost])
+	summary_writer.add_summary(summary_str, step)
+	if step%100 == 0:
+	    saver.save(sess, os.path.join('./checkpoints', 'mnist'), global_step=global_step)
+	step += 1

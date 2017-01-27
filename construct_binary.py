@@ -30,6 +30,7 @@ def mnist(path='mnist.tfrecords'):
         serialized = example.SerializeToString()
         # write the serialized object to disk
         writer.write(serialized)
-     return path
+
+    return path
 
 
