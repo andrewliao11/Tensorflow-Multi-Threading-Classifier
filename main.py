@@ -75,8 +75,14 @@ if __name__ == '__main__':
     tf.train.start_queue_runners(sess=sess)
     step = 0
     while True:
-  	_, summary_str, loss = sess.run([train_op, summary_op, M.cost])
+  	_, summary_str, loss, accuracy = sess.run([train_op, summary_op, M.cost, M.accuracy])
 	summary_writer.add_summary(summary_str, step)
 	if step%100 == 0:
+	    if not os.path.exists('./checkpoints'):
+		os.makdir('./checkpoints')
 	    saver.save(sess, os.path.join('./checkpoints', 'mnist'), global_step=global_step)
+	    print "==================================="
+	    print "[#] Iter", step
+	    print "[L] Loss =", loss
+	    print "[A] Accuracy =", accuracy
 	step += 1
