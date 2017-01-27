@@ -6,8 +6,9 @@ from utils import *
 
 class Model(object):
 
-    def __init__(self, args, scope='mnist'):
-	self.num_classes = args.classes
+    def __init__(self, num_classes=None, scope='mnist'):
+	assert num_classes!=None
+	self.num_classes = num_classes
 	self.scope = scope
 
     def _get_logits(self, x):
@@ -37,10 +38,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Multi-thread mnist classifier')
     parser.add_argument('--lr', type=float, default=3e-4,
                     help='initial learning rate')
-    parser.add_argument('--ds_dir', type=str, default='./data/mnist',
-                    help='specify where the dataset is')
     parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--classes', type=int, default=10)
     args = parser.parse_args()
 
     bin_filepath = 'mnist.tfrecords'
@@ -55,7 +53,7 @@ if __name__ == '__main__':
     )
 
     # build graph
-    M = Model(args)
+    M = Model(num_classes=10)
     M._build_graph(images_batch, labels_batch)
     global_step = tf.get_variable('global_step', [], 
 			initializer=tf.constant_initializer(0), trainable=False)
