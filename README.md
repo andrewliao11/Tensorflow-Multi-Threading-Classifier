@@ -1,6 +1,9 @@
 # Multi-Threading-mnist-classifier
 The project aims at implementing a simple mnist classifer with **multi-thread FIFOQueue**
 
+## what's the advantage of using FIFOQueue?
+
+
 ## dependencies
 - python2
 - tensorflow (>0.12)
@@ -26,4 +29,5 @@ python main.py [args]
 
 ## reference
 - [TensorFlow Data Input (Part 1): Placeholders, Protobufs & Queues](https://indico.io/blog/tensorflow-data-inputs-part1-placeholders-protobufs-queues/)
+
 
