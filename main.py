@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import os, argparse, pdb
+import os, argparse, pdb, multiprocessing
 import nn, construct_binary, reader
 from utils import *
 
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     summary_op = tf.summary.merge_all()
     saver = tf.train.Saver(max_to_keep=20)
 
-    config = get_session_config(0.3)
+    config = get_session_config(0.3, multiprocessing.cpu_count()/2)
     sess = tf.Session(config=config)
     init_op = tf.global_variables_initializer()
     sess.run(init_op)
