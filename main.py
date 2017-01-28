@@ -13,7 +13,12 @@ class Model(object):
 
     def _get_logits(self, x):
 	x = tf.to_float(x)/255.
-	fc1 = nn.fc(x, 100, nl=tf.nn.relu, scope='fc1')
+	x = tf.reshape(x, [-1, 28, 28, 1])
+	conv1 = nn.max_pool(nn.conv2d(x, 32, 5, nl=tf.nn.relu, scope='conv1'), 
+			2, 2, scope='mp1')
+	conv2 = nn.max_pool(nn.conv2d(conv1, 64, 5, nl=tf.nn.relu, scope='conv2'), 
+			2, 2, scope='mp2')
+	fc1 = nn.fc(conv2, 100, nl=tf.nn.relu, scope='fc1')
 	prob = nn.fc(fc1, self.num_classes, scope='fc2')
 	return prob
 

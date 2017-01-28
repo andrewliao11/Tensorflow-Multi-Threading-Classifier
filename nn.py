@@ -1,4 +1,18 @@
 import tensorflow as tf
+import pdb
+
+def max_pool(x, ksize, stride, padding='VALID', 
+		scope='max_pool'):
+
+    in_shape = x.get_shape().as_list()
+    # assume to be [batch, height, width, channels]
+    assert len(in_shape)==4     # B,H,W,C
+    padding = padding.upper()
+    kshape = [1, ksize, ksize, 1]
+    sshape = [1, stride, stride, 1]
+    with tf.variable_scope(scope):
+    	return tf.nn.max_pool(x, ksize=kshape, strides=sshape, 
+		padding=padding, name='output')
 
 def conv2d(x, out_channel, kernel_shape, 
 	   padding='SAME', stride=1,
@@ -7,12 +21,12 @@ def conv2d(x, out_channel, kernel_shape,
 	   scope='conv2d'):
 
     in_shape = x.get_shape().as_list()
-    assert len(in_shape)==4	# B,W,H,C
+    assert len(in_shape)==4	# B,H,W,C
     in_channel = in_shape[-1]
 
     filter_shape = [kernel_shape, kernel_shape] + [in_channel, out_channel]
     padding = padding.upper()
-
+    stride = [1, stride, stride, 1]
     if W_init is None:
 	W_init = tf.contrib.layers.variance_scaling_initializer()
     if b_init is None:
